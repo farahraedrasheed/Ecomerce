@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>My Orders</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <h1>E-Commerce Platform</h1>
+  <nav id="nav"></nav>
+</header>
+
+<main>
+  <h2>My Orders</h2>
+  <div id="message" class="message"></div>
+  <div id="ordersList"></div>
+</main>
+
+<script src="js/api.js"></script>
+<script>
+renderNav();
+
+if (!isLoggedIn()) {
+  window.location.href = 'login.html';
+}
+
+const params = new URLSearchParams(window.location.search);
+if (params.get('justPlaced')) {
+  showMessage('message', 'Order placed successfully!', false);
+}
+
+async function loadOrders() {
+  try {
+    const orders = await apiRequest('/orders', { auth: true });
+    const list = document.getElementById('ordersList');
+
+    if (orders.length === 0) {
+      list.innerHTML = '<p class="empty-state">No orders yet.</p>';
+      return;
+    }
+
+    list.innerHTML = orders.map(order => `
+      <div class="card" style="margin-bottom:1rem;">
+        <h3>Order #${order.id} <span class="badge ${order.status}">${order.status}</span></h3>
+        <p>Placed: ${new Date(order.created_at).toLocaleString()}</p>
+        <p>Shipping to: ${order.shipping_address}</p>
+        <table>
+          <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead>
+          <tbody>
+            ${order.items.map(item => `
+              <tr>
+                <td>${item.product ? item.product.name : 'Product #' + item.product_id}</td>
+                <td>${item.quantity}</td>
+                <td>$${Number(item.price).toFixed(2)}</td>
+                <td>$${(item.quantity * item.price).toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <p><strong>Total: $${Number(order.total_amount).toFixed(2)}</strong></p>
+      </div>
+    `).join('');
+  } catch (e) {
+    showMessage('message', e.message);
+  }
+}
+
+loadOrders();
+</script>
+</body>
+</html>

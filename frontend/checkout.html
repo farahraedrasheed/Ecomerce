@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Checkout</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <h1>E-Commerce Platform</h1>
+  <nav id="nav"></nav>
+</header>
+
+<main>
+  <h2>Checkout</h2>
+  <form id="checkoutForm">
+    <div id="message" class="message"></div>
+    <label>Shipping Address</label>
+    <textarea id="shippingAddress" rows="4" required></textarea>
+    <br><br>
+    <button type="submit">Confirm Order</button>
+  </form>
+</main>
+
+<script src="js/api.js"></script>
+<script>
+renderNav();
+
+if (!isLoggedIn()) {
+  window.location.href = 'login.html';
+}
+
+document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const shipping_address = document.getElementById('shippingAddress').value;
+
+  try {
+    const order = await apiRequest('/orders', { method: 'POST', auth: true, body: { shipping_address } });
+    window.location.href = `orders.html?justPlaced=${order.id}`;
+  } catch (e) {
+    showMessage('message', e.message);
+  }
+});
+</script>
+</body>
+</html>

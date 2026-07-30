@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Manage Orders — Admin</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<header>
+  <h1>E-Commerce Platform — Admin</h1>
+  <nav id="nav"></nav>
+</header>
+
+<main>
+  <h2>All Orders</h2>
+  <div id="message" class="message"></div>
+  <div id="ordersList"></div>
+</main>
+
+<script src="../js/api.js"></script>
+<script>
+renderNav();
+
+if (!isLoggedIn() || !isAdmin()) {
+  window.location.href = '../login.html';
+}
+
+const STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+
+async function loadOrders() {
+  try {
+    const orders = await apiRequest('/orders', { auth: true });
+    const list = document.getElementById('ordersList');
+
+    if (orders.length === 0) {
+      list.innerHTML = '<p class="empty-state">No orders yet.</p>';
+      return;
+    }
+
+    list.innerHTML = orders.map(order => `
+      <div class="card" style="margin-bottom:1rem;">
+        <h3>Order #${order.id} — ${order.user ? order.user.name : 'User #' + order.user_id}
+          <span class="badge ${order.status}">${order.status}</span>
+        </h3>
+        <p>Placed: ${new Date(order.created_at).toLocaleString()}</p>
+        <p>Shipping to: ${order.shipping_address}</p>
+        <table>
+          <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead>
+          <tbody>
+            ${order.items.map(item => `
+              <tr>
+                <td>${item.product ? item.product.name : 'Product #' + item.product_id}</td>
+                <td>${item.quantity}</td>
+                <td>$${Number(item.price).toFixed(2)}</td>
+                <td>$${(item.quantity * item.price).toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <p><strong>Total: $${Number(order.total_amount).toFixed(2)}</strong></p>
+        <label>Update Status</label>
+        <select data-id="${order.id}" class="statusSelect" style="max-width:200px;">
+          ${STATUSES.map(s => `<option value="${s}" ${s === order.status ? 'selected' : ''}>${s}</option>`).join('')}
+        </select>
+      </div>
+    `).join('');
+
+    document.querySelectorAll('.statusSelect').forEach(select => {
+      select.addEventListener('change', () => updateStatus(select.dataset.id, select.value));
+    });
+  } catch (e) {
+    showMessage('message', e.message);
+  }
+}
+
+async function updateStatus(orderId, status) {
+  try {
+    await apiRequest(`/orders/${orderId}/status`, { method: 'PUT', auth: true, body: { status } });
+    showMessage('message', `Order #${orderId} updated to "${status}".`, false);
+  } catch (e) {
+    showMessage('message', e.message);
+  }
+}
+
+loadOrders();
+</script>
+</body>
+</html>

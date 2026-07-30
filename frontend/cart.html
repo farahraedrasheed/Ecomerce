@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>My Cart</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <h1>E-Commerce Platform</h1>
+  <nav id="nav"></nav>
+</header>
+
+<main>
+  <h2>My Cart</h2>
+  <div id="message" class="message"></div>
+  <table id="cartTable" style="display:none;">
+    <thead>
+      <tr><th>Product</th><th>Price</th><th>Quantity</th><th>Subtotal</th><th></th></tr>
+    </thead>
+    <tbody id="cartBody"></tbody>
+  </table>
+  <p id="emptyState" class="empty-state" style="display:none;">Your cart is empty.</p>
+  <h3 id="cartTotal"></h3>
+  <a href="checkout.html" class="btn" id="checkoutBtn" style="display:none; text-decoration:none;">Proceed to Checkout</a>
+</main>
+
+<script src="js/api.js"></script>
+<script>
+renderNav();
+
+if (!isLoggedIn()) {
+  window.location.href = 'login.html';
+}
+
+async function loadCart() {
+  try {
+    const { items, total } = await apiRequest('/cart', { auth: true });
+    const body = document.getElementById('cartBody');
+    body.innerHTML = '';
+
+    if (items.length === 0) {
+      document.getElementById('emptyState').style.display = 'block';
+      document.getElementById('cartTable').style.display = 'none';
+      document.getElementById('checkoutBtn').style.display = 'none';
+      document.getElementById('cartTotal').textContent = '';
+      return;
+    }
+
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('cartTable').style.display = 'table';
+    document.getElementById('checkoutBtn').style.display = 'inline-block';
+
+    items.forEach(item => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${item.product.name}</td>
+        <td>$${Number(item.product.price).toFixed(2)}</td>
+        <td>
+          <input type="number" min="1" max="${item.product.stock}" value="${item.quantity}"
+                 data-id="${item.id}" class="qtyInput" style="width:70px;">
+        </td>
+        <td>$${(item.quantity * item.product.price).toFixed(2)}</td>
+        <td><button class="danger removeBtn" data-id="${item.id}">Remove</button></td>
+      `;
+      body.appendChild(row);
+    });
+
+    document.getElementById('cartTotal').textContent = `Total: $${Number(total).toFixed(2)}`;
+
+    document.querySelectorAll('.qtyInput').forEach(input => {
+      input.addEventListener('change', () => updateQuantity(input.dataset.id, input.value));
+    });
+    document.querySelectorAll('.removeBtn').forEach(btn => {
+      btn.addEventListener('click', () => removeItem(btn.dataset.id));
+    });
+  } catch (e) {
+    showMessage('message', e.message);
+  }
+}
+
+async function updateQuantity(id, quantity) {
+  try {
+    await apiRequest(`/cart/${id}`, { method: 'PUT', auth: true, body: { quantity: Number(quantity) } });
+    loadCart();
+  } catch (e) {
+    showMessage('message', e.message);
+  }
+}
+
+async function removeItem(id) {
+  try {
+    await apiRequest(`/cart/${id}`, { method: 'DELETE', auth: true });
+    loadCart();
+  } catch (e) {
+    showMessage('message', e.message);
+  }
+}
+
+loadCart();
+</script>
+</body>
+</html>

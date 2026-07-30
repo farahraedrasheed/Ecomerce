@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Storefront — E-Commerce Platform</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <h1>E-Commerce Platform</h1>
+  <nav id="nav"></nav>
+</header>
+
+<main>
+  <h2>Products</h2>
+
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search products...">
+    <select id="categoryFilter">
+      <option value="">All categories</option>
+    </select>
+    <button id="searchBtn">Search</button>
+  </div>
+
+  <div id="message" class="message"></div>
+  <div class="grid" id="productGrid"></div>
+</main>
+
+<script src="js/api.js"></script>
+<script>
+renderNav();
+
+async function loadCategories() {
+  try {
+    const products = await apiRequest('/products');
+    const select = document.getElementById('categoryFilter');
+    const seen = new Set();
+    products.forEach(p => {
+      if (p.category && !seen.has(p.category.slug)) {
+        seen.add(p.category.slug);
+        const opt = document.createElement('option');
+        opt.value = p.category.slug;
+        opt.textContent = p.category.name;
+        select.appendChild(opt);
+      }
+    });
+  } catch (e) {
+    // non-fatal
+  }
+}
+
+async function loadProducts() {
+  const grid = document.getElementById('productGrid');
+  grid.innerHTML = '';
+  const search = document.getElementById('searchInput').value.trim();
+  const category = document.getElementById('categoryFilter').value;
+
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  if (category) params.set('category', category);
+  const query = params.toString() ? `?${params.toString()}` : '';
+
+  try {
+    const products = await apiRequest(`/products${query}`);
+    if (products.length === 0) {
+      grid.innerHTML = '<p class="empty-state">No products found.</p>';
+      return;
+    }
+    products.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <h3><a href="product.html?id=${p.id}">${p.name}</a></h3>
+        <p class="price">$${Number(p.price).toFixed(2)}</p>
+        <p class="stock">${p.stock} in stock &middot; ${p.category ? p.category.name : ''}</p>
+        <button data-id="${p.id}" class="addBtn">Add to Cart</button>
+      `;
+      grid.appendChild(card);
+    });
+
+    document.querySelectorAll('.addBtn').forEach(btn => {
+      btn.addEventListener('click', () => addToCart(btn.dataset.id));
+    });
+  } catch (e) {
+    showMessage('message', e.message);
+  }
+}
+
+async function addToCart(productId) {
+  if (!isLoggedIn()) {
+    window.location.href = 'login.html';
+    return;
+  }
+  try {
+    await apiRequest('/cart', { method: 'POST', auth: true, body: { product_id: Number(productId), quantity: 1 } });
+    showMessage('message', 'Added to cart.', false);
+  } catch (e) {
+    showMessage('message', e.message);
+  }
+}
+
+document.getElementById('searchBtn').addEventListener('click', loadProducts);
+document.getElementById('searchInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') loadProducts();
+});
+document.getElementById('categoryFilter').addEventListener('change', loadProducts);
+
+loadCategories();
+loadProducts();
+</script>
+</body>
+</html>
