@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ShopHub Admin — Products</title>
+<title>ShopHub — Sell a Product</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
 <nav class="navbar navbar-expand-lg navbar-dark site-navbar sticky-top shadow-sm">
   <div class="container">
-    <a class="navbar-brand" href="../index.html"><i class="bi bi-bag-check-fill me-2"></i>ShopHub <span class="fw-normal opacity-75">Admin</span></a>
+    <a class="navbar-brand" href="index.html"><i class="bi bi-bag-check-fill me-2"></i>ShopHub</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
@@ -23,11 +23,12 @@
 </nav>
 
 <main>
-  <h2>Manage Products</h2>
+  <h2>Sell a Product</h2>
+  <p class="text-muted">List an item for sale. It goes live on the storefront immediately.</p>
   <div id="message" class="message"></div>
 
   <form id="productForm">
-    <h3 id="formTitle">Add New Product</h3>
+    <h3 id="formTitle">New Listing</h3>
     <input type="hidden" id="productId">
     <label>Category</label>
     <select id="categoryId" required>
@@ -44,13 +45,13 @@
     <label>Stock</label>
     <input type="number" id="stock" min="0" required>
     <br><br>
-    <button type="submit" id="submitBtn">Create Product</button>
+    <button type="submit" id="submitBtn">Publish Listing</button>
     <button type="button" id="cancelEditBtn" class="secondary" style="display:none;">Cancel</button>
   </form>
 
-  <h3 style="margin-top:2rem;">All Products</h3>
+  <h3 style="margin-top:2rem;">My Listings</h3>
   <table>
-    <thead><tr><th>Image</th><th>ID</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Active</th><th></th></tr></thead>
+    <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Active</th><th></th></tr></thead>
     <tbody id="productsBody"></tbody>
   </table>
 </main>
@@ -60,12 +61,12 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="../js/api.js"></script>
+<script src="js/api.js"></script>
 <script>
 renderNav();
 
-if (!isLoggedIn() || !isAdmin()) {
-  window.location.href = '../login.html';
+if (!isLoggedIn()) {
+  window.location.href = 'login.html';
 }
 
 async function loadCategoryOptions() {
@@ -85,11 +86,17 @@ async function loadCategoryOptions() {
 
 async function loadProducts() {
   try {
-    const products = await apiRequest('/products', { auth: true });
-    document.getElementById('productsBody').innerHTML = products.map(p => `
+    const products = await apiRequest('/my-products', { auth: true });
+    const body = document.getElementById('productsBody');
+
+    if (products.length === 0) {
+      body.innerHTML = '<tr><td colspan="7" class="empty-state">You haven\'t listed any products yet.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = products.map(p => `
       <tr>
         <td><img src="${p.image_url || 'https://placehold.co/80x60?text=No+Image'}" alt="" style="width:56px;height:42px;object-fit:cover;border-radius:6px;"></td>
-        <td>${p.id}</td>
         <td>${p.name}</td>
         <td>${p.category ? p.category.name : p.category_id}</td>
         <td>$${Number(p.price).toFixed(2)}</td>
@@ -136,8 +143,8 @@ function editProduct(product) {
 function resetForm() {
   document.getElementById('productForm').reset();
   document.getElementById('productId').value = '';
-  document.getElementById('formTitle').textContent = 'Add New Product';
-  document.getElementById('submitBtn').textContent = 'Create Product';
+  document.getElementById('formTitle').textContent = 'New Listing';
+  document.getElementById('submitBtn').textContent = 'Publish Listing';
   document.getElementById('cancelEditBtn').style.display = 'none';
 }
 
@@ -158,10 +165,10 @@ document.getElementById('productForm').addEventListener('submit', async (e) => {
   try {
     if (id) {
       await apiRequest(`/products/${id}`, { method: 'PUT', auth: true, body: payload });
-      showMessage('message', 'Product updated.', false);
+      showMessage('message', 'Listing updated.', false);
     } else {
       await apiRequest('/products', { method: 'POST', auth: true, body: payload });
-      showMessage('message', 'Product created.', false);
+      showMessage('message', 'Listing published.', false);
     }
     resetForm();
     loadProducts();
@@ -180,7 +187,7 @@ async function toggleActive(id, currentlyActive) {
 }
 
 async function deleteProduct(id) {
-  if (!confirm('Delete this product permanently?')) return;
+  if (!confirm('Delete this listing permanently?')) return;
   try {
     await apiRequest(`/products/${id}`, { method: 'DELETE', auth: true });
     loadProducts();

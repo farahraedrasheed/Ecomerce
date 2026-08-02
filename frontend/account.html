@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShopHub — My Account</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark site-navbar sticky-top shadow-sm">
+  <div class="container">
+    <a class="navbar-brand" href="index.html"><i class="bi bi-bag-check-fill me-2"></i>ShopHub</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarMain">
+      <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2 py-2 py-lg-0" id="nav"></ul>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <h2>My Account</h2>
+  <div id="message" class="message"></div>
+
+  <div class="card" style="max-width:480px;">
+    <h3><i class="bi bi-person-circle me-2"></i>Profile</h3>
+    <p><strong>Name:</strong> <span id="profileName"></span></p>
+    <p><strong>Email:</strong> <span id="profileEmail"></span></p>
+    <p><strong>Role:</strong> <span id="profileRole"></span></p>
+    <p><strong>Member since:</strong> <span id="profileSince"></span></p>
+  </div>
+
+  <div class="card" style="max-width:480px; margin-top:1.5rem;">
+    <h3><i class="bi bi-credit-card me-2"></i>Saved Card</h3>
+
+    <div id="savedCardView" style="display:none;">
+      <p style="font-size:1.1rem; letter-spacing:0.05em;">
+        <i class="bi bi-credit-card-2-front me-2"></i>
+        <span id="savedCardBrand"></span> &bull;&bull;&bull;&bull; <span id="savedCardLast4"></span>
+      </p>
+      <p>Cardholder: <span id="savedCardName"></span></p>
+      <p>Expires: <span id="savedCardExpiry"></span></p>
+      <button type="button" id="removeCardBtn" class="danger">Remove Card</button>
+    </div>
+
+    <p id="noCardMessage" class="text-muted" style="display:none;">No card on file.</p>
+
+    <form id="cardForm" style="padding:0; box-shadow:none; border:none; max-width:none; margin:1rem 0 0;">
+      <label>Name on Card</label>
+      <input type="text" id="cardName" required>
+
+      <label>Card Number</label>
+      <input type="text" id="cardNumber" inputmode="numeric" maxlength="19" placeholder="1234 5678 9012 3456" required>
+
+      <div style="display:flex; gap:1rem;">
+        <div style="flex:1;">
+          <label>Expiry (MM/YY)</label>
+          <input type="text" id="cardExpiry" inputmode="numeric" maxlength="5" placeholder="MM/YY" required>
+        </div>
+        <div style="flex:1;">
+          <label>CVV</label>
+          <input type="text" id="cardCvv" inputmode="numeric" maxlength="4" placeholder="123" required>
+        </div>
+      </div>
+
+      <br>
+      <button type="submit" id="cardSubmitBtn">Save Card</button>
+    </form>
+  </div>
+</main>
+
+<footer class="text-center py-4 small">
+  &copy; 2026 ShopHub. Built with Laravel &amp; vanilla JS.
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/api.js"></script>
+<script>
+renderNav();
+
+if (!isLoggedIn()) {
+  window.location.href = 'login.html';
+}
+
+function renderCard(user) {
+  const hasCard = !!user.card_last_four;
+  document.getElementById('savedCardView').style.display = hasCard ? 'block' : 'none';
+  document.getElementById('noCardMessage').style.display = hasCard ? 'none' : 'block';
+  document.getElementById('cardSubmitBtn').textContent = hasCard ? 'Replace Card' : 'Save Card';
+
+  if (hasCard) {
+    document.getElementById('savedCardBrand').textContent = user.card_brand || 'Card';
+    document.getElementById('savedCardLast4').textContent = user.card_last_four;
+    document.getElementById('savedCardName').textContent = user.card_holder_name;
+    document.getElementById('savedCardExpiry').textContent = user.card_expiry;
+  }
+}
+
+async function loadAccount() {
+  try {
+    const user = await apiRequest('/account', { auth: true });
+    document.getElementById('profileName').textContent = user.name;
+    document.getElementById('profileEmail').textContent = user.email;
+    document.getElementById('profileRole').textContent = user.role;
+    document.getElementById('profileSince').textContent = new Date(user.created_at).toLocaleDateString();
+    renderCard(user);
+  } catch (e) {
+    showMessage('message', e.message);
+  }
+}
+
+document.getElementById('cardNumber').addEventListener('input', (e) => {
+  e.target.value = e.target.value.replace(/\D/g, '').slice(0, 19).replace(/(\d{4})(?=\d)/g, '$1 ');
+});
+
+document.getElementById('cardExpiry').addEventListener('input', (e) => {
+  e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4).replace(/(\d{2})(?=\d)/, '$1/');
+});
+
+document.getElementById('cardCvv').addEventListener('input', (e) => {
+  e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
+});
+
+document.getElementById('cardForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const body = {
+    card_name: document.getElementById('cardName').value,
+    card_number: document.getElementById('cardNumber').value,
+    card_expiry: document.getElementById('cardExpiry').value,
+    card_cvv: document.getElementById('cardCvv').value,
+  };
+
+  try {
+    const user = await apiRequest('/account/card', { method: 'PUT', auth: true, body });
+    showMessage('message', 'Card saved.', false);
+    document.getElementById('cardForm').reset();
+    renderCard(user);
+  } catch (e) {
+    showMessage('message', e.message);
+  }
+});
+
+document.getElementById('removeCardBtn').addEventListener('click', async () => {
+  if (!confirm('Remove your saved card?')) return;
+  try {
+    await apiRequest('/account/card', { method: 'DELETE', auth: true });
+    showMessage('message', 'Card removed.', false);
+    loadAccount();
+  } catch (e) {
+    showMessage('message', e.message);
+  }
+});
+
+loadAccount();
+</script>
+</body>
+</html>

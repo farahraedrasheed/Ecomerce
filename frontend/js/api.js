@@ -1,4 +1,4 @@
-const API_BASE = 'http://127.0.0.1:8020/api';
+const API_BASE = 'http://127.0.0.1:8000/api';
 
 function getToken() {
   return localStorage.getItem('token');
@@ -69,15 +69,28 @@ function renderNav(activePage = '') {
   const user = getUser();
   const root = window.location.pathname.includes('/admin/') ? '../' : '';
 
-  let links = `<a href="${root}index.html">Storefront</a>`;
+  let links = '';
+  if (!admin) {
+    links += `<li class="nav-item"><a class="nav-link" href="${root}index.html"><i class="bi bi-shop me-1"></i>Storefront</a></li>`;
+  }
   if (loggedIn) {
-    links += ` <a href="${root}cart.html">Cart</a> <a href="${root}orders.html">My Orders</a>`;
-    if (admin) {
-      links += ` <a href="${root}admin/products.html">Manage Products</a> <a href="${root}admin/orders.html">Manage Orders</a>`;
+    if (!admin) {
+      links += `<li class="nav-item"><a class="nav-link" href="${root}cart.html"><i class="bi bi-cart3 me-1"></i>Cart</a></li>`;
+      links += `<li class="nav-item"><a class="nav-link" href="${root}orders.html"><i class="bi bi-box-seam me-1"></i>My Orders</a></li>`;
+      links += `<li class="nav-item"><a class="nav-link" href="${root}sell.html"><i class="bi bi-tag me-1"></i>Sell a Product</a></li>`;
     }
-    links += ` <span class="nav-user">${user.name} (${user.role})</span> <a href="#" id="logoutLink">Logout</a>`;
+    if (admin) {
+      links += `<li class="nav-item"><a class="nav-link" href="${root}admin/products.html"><i class="bi bi-boxes me-1"></i>Manage Products</a></li>`;
+      links += `<li class="nav-item"><a class="nav-link" href="${root}admin/categories.html"><i class="bi bi-tags me-1"></i>Manage Categories</a></li>`;
+      links += `<li class="nav-item"><a class="nav-link" href="${root}admin/orders.html"><i class="bi bi-clipboard-check me-1"></i>Manage Orders</a></li>`;
+      links += `<li class="nav-item"><a class="nav-link" href="${root}admin/dashboard.html"><i class="bi bi-graph-up me-1"></i>Dashboard</a></li>`;
+    }
+    links += `<li class="nav-item"><a class="nav-link" href="${root}account.html"><i class="bi bi-person-circle me-1"></i>My Account</a></li>`;
+    links += `<li class="nav-item d-flex align-items-lg-center py-2 py-lg-0"><span class="badge rounded-pill text-bg-light nav-user-badge">${user.name} (${user.role})</span></li>`;
+    links += `<li class="nav-item"><a href="#" id="logoutLink" class="btn btn-sm btn-outline-light ms-lg-2">Logout</a></li>`;
   } else {
-    links += ` <a href="${root}login.html">Login</a> <a href="${root}register.html">Register</a>`;
+    links += `<li class="nav-item"><a class="nav-link" href="${root}login.html">Login</a></li>`;
+    links += `<li class="nav-item"><a class="btn btn-sm btn-light ms-lg-2" href="${root}register.html">Register</a></li>`;
   }
 
   nav.innerHTML = links;
@@ -92,7 +105,7 @@ function renderNav(activePage = '') {
         // ignore network errors on logout
       }
       clearSession();
-      window.location.href = 'login.html';
+      window.location.href = `${root}login.html`;
     });
   }
 }

@@ -2,15 +2,25 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>My Orders</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShopHub — My Orders</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<header>
-  <h1>E-Commerce Platform</h1>
-  <nav id="nav"></nav>
-</header>
+<nav class="navbar navbar-expand-lg navbar-dark site-navbar sticky-top shadow-sm">
+  <div class="container">
+    <a class="navbar-brand" href="index.html"><i class="bi bi-bag-check-fill me-2"></i>ShopHub</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarMain">
+      <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2 py-2 py-lg-0" id="nav"></ul>
+    </div>
+  </div>
+</nav>
 
 <main>
   <h2>My Orders</h2>
@@ -18,6 +28,11 @@
   <div id="ordersList"></div>
 </main>
 
+<footer class="text-center py-4 small">
+  &copy; 2026 ShopHub. Built with Laravel &amp; vanilla JS.
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/api.js"></script>
 <script>
 renderNav();
@@ -29,6 +44,34 @@ if (!isLoggedIn()) {
 const params = new URLSearchParams(window.location.search);
 if (params.get('justPlaced')) {
   showMessage('message', 'Order placed successfully!', false);
+}
+
+const STATUS_STEPS = ['pending', 'processing', 'shipped', 'delivered'];
+const STATUS_ICONS = {
+  pending: 'bi-hourglass-split',
+  processing: 'bi-gear-fill',
+  shipped: 'bi-truck',
+  delivered: 'bi-check-circle-fill',
+};
+
+function renderStatusTimeline(status) {
+  if (status === 'cancelled') {
+    return `<div class="status-cancelled"><i class="bi bi-x-circle-fill me-2"></i>This order was cancelled.</div>`;
+  }
+
+  const currentIndex = STATUS_STEPS.indexOf(status);
+
+  return `
+    <div class="status-timeline">
+      ${STATUS_STEPS.map((step, i) => `
+        <div class="status-step ${i <= currentIndex ? 'done' : ''} ${i === currentIndex ? 'current' : ''}">
+          <div class="status-step-circle"><i class="bi ${STATUS_ICONS[step]}"></i></div>
+          <div class="status-step-label">${step.charAt(0).toUpperCase() + step.slice(1)}</div>
+        </div>
+        ${i < STATUS_STEPS.length - 1 ? `<div class="status-step-line ${i < currentIndex ? 'done' : ''}"></div>` : ''}
+      `).join('')}
+    </div>
+  `;
 }
 
 async function loadOrders() {
@@ -46,12 +89,19 @@ async function loadOrders() {
         <h3>Order #${order.id} <span class="badge ${order.status}">${order.status}</span></h3>
         <p>Placed: ${new Date(order.created_at).toLocaleString()}</p>
         <p>Shipping to: ${order.shipping_address}</p>
+        <p>Payment: <i class="bi bi-credit-card me-1"></i>${order.payment_method === 'card' ? 'Card' : order.payment_method} ending in ${order.card_last_four || '----'} — <span class="badge ${order.payment_status}">${order.payment_status}</span></p>
+        ${renderStatusTimeline(order.status)}
         <table>
           <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Subtotal</th></tr></thead>
           <tbody>
             ${order.items.map(item => `
               <tr>
-                <td>${item.product ? item.product.name : 'Product #' + item.product_id}</td>
+                <td>
+                  <div style="display:flex; align-items:center; gap:0.6rem;">
+                    <img src="${item.product && item.product.image_url ? item.product.image_url : 'https://placehold.co/60x60?text=No+Image'}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:6px;">
+                    <span>${item.product ? item.product.name : 'Product #' + item.product_id}</span>
+                  </div>
+                </td>
                 <td>${item.quantity}</td>
                 <td>$${Number(item.price).toFixed(2)}</td>
                 <td>$${(item.quantity * item.price).toFixed(2)}</td>

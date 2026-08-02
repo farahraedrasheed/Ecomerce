@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Support\CardValidator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -33,6 +34,10 @@ class OrderController extends Controller
     {
         $validated = $request->validate([
             'shipping_address' => ['required', 'string'],
+            'card_name' => ['required', 'string', 'max:255'],
+            'card_number' => ['required', 'string'],
+            'card_expiry' => ['required', 'string', 'regex:/^(0[1-9]|1[0-2])\/\d{2}$/'],
+            'card_cvv' => ['required', 'digits_between:3,4'],
         ]);
 
         $cartItems = $request->user()->cartItems()->with('product')->get();
@@ -41,7 +46,23 @@ class OrderController extends Controller
             return response()->json(['message' => 'Your cart is empty.'], 422);
         }
 
-        $order = DB::transaction(function () use ($request, $validated, $cartItems) {
+        $cardNumber = CardValidator::digitsOnly($validated['card_number']);
+
+        if (! CardValidator::passesLuhnCheck($cardNumber)) {
+            return response()->json(['message' => 'Your card number is invalid.'], 422);
+        }
+
+        if (CardValidator::isExpired($validated['card_expiry'])) {
+            return response()->json(['message' => 'Your card has expired.'], 422);
+        }
+
+        // Mock payment gateway: this well-known test number is treated as a decline
+        // so the "payment failed" path can be demoed without a real processor.
+        if ($cardNumber === '4000000000000002') {
+            return response()->json(['message' => 'Your card was declined.'], 402);
+        }
+
+        $order = DB::transaction(function () use ($request, $validated, $cartItems, $cardNumber) {
             $total = $cartItems->sum(fn ($item) => $item->quantity * $item->product->price);
 
             $order = Order::create([
@@ -49,6 +70,9 @@ class OrderController extends Controller
                 'status' => 'pending',
                 'total_amount' => $total,
                 'shipping_address' => $validated['shipping_address'],
+                'payment_status' => 'paid',
+                'payment_method' => 'card',
+                'card_last_four' => substr($cardNumber, -4),
             ]);
 
             foreach ($cartItems as $item) {

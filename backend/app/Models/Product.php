@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['category_id', 'name', 'slug', 'description', 'price', 'stock', 'is_active'])]
+#[Fillable(['category_id', 'user_id', 'name', 'slug', 'description', 'image_url', 'price', 'stock', 'is_active'])]
 class Product extends Model
 {
     use HasFactory;
@@ -24,6 +24,11 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function seller(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function cartItems(): HasMany
