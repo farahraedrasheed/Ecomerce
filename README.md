@@ -1,6 +1,6 @@
-# Full-Stack E-Commerce Platform
+# Full Stack E-Commerce Platform
 
-A full-stack e-commerce platform where customers can browse products, search by category, manage a shopping cart, and place orders. Admins can manage the product catalog and track/update incoming orders.
+A Full Stack e-commerce platform where customers can browse products, search by category, manage a shopping cart, and place orders. Admins can manage the product catalog and track/update incoming orders.
 
 Built API-first: a Laravel backend exposes a RESTful JSON API (auth via Laravel Sanctum), consumed by a plain HTML/CSS/JavaScript frontend — no frontend framework, no build step.
 
